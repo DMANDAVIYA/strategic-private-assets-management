@@ -140,7 +140,7 @@ test("login with x-forwarded-proto https sets Secure cookie", async () => {
   expect(forwardedHeader).toContain("Secure");
   expect(forwardedHeader).toContain("HttpOnly");
   expect(forwardedHeader).toContain("SameSite=Lax");
-  const direct = await login(app, correct, { url: "https://localhost/api/auth/login" });
+  const direct = await login(app, correct, { remoteAddress: "192.168.1.9", encrypted: true });
   expect(direct.status).toBe(200);
   expect(direct.headers.get("set-cookie")).toContain("Secure");
 });

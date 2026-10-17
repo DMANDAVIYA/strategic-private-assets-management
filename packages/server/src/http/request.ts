@@ -3,9 +3,11 @@ import type { Context } from "hono";
 
 export const UNKNOWN_CLIENT_IP = "unknown";
 
-const LOOPBACK_PROXY_ADDRESSES = new Set(["127.0.0.1", "::1", "::ffff:127.0.0.1"]);
+const LOOPBACK_ADDRESSES = new Set(["127.0.0.1", "::1", "::ffff:127.0.0.1"]);
 
-function socketAddress(c: Context): string | undefined {
+type SocketBindings = { incoming?: { socket?: { encrypted?: unknown } } };
+
+export function remoteAddressOf(c: Context): string | undefined {
   try {
     return getConnInfo(c).remote.address || undefined;
   } catch {
@@ -13,24 +15,36 @@ function socketAddress(c: Context): string | undefined {
   }
 }
 
-function isFromLoopbackProxy(c: Context): boolean {
-  const address = socketAddress(c);
-  return address !== undefined && LOOPBACK_PROXY_ADDRESSES.has(address);
+function isLoopbackAddress(address: string | undefined): boolean {
+  return address !== undefined && LOOPBACK_ADDRESSES.has(address);
+}
+
+function isLoopbackConnection(c: Context): boolean {
+  return isLoopbackAddress(remoteAddressOf(c));
 }
 
 export function clientIp(c: Context): string {
-  if (isFromLoopbackProxy(c)) {
+  if (isLoopbackConnection(c)) {
     const firstForwardedHop = c.req.header("x-forwarded-for")?.split(",")[0]?.trim();
     if (firstForwardedHop) {
       return firstForwardedHop;
     }
   }
-  return socketAddress(c) ?? UNKNOWN_CLIENT_IP;
+  return remoteAddressOf(c) ?? UNKNOWN_CLIENT_IP;
+}
+
+export function isLocalClient(c: Context): boolean {
+  return isLoopbackConnection(c) && isLoopbackAddress(clientIp(c));
+}
+
+function isEncryptedSocket(c: Context): boolean {
+  return (c.env as SocketBindings | undefined)?.incoming?.socket?.encrypted === true;
 }
 
 export function isSecureRequest(c: Context): boolean {
-  if (new URL(c.req.url).protocol === "https:") {
-    return true;
-  }
-  return isFromLoopbackProxy(c) && c.req.header("x-forwarded-proto") === "https";
+  return isEncryptedSocket(c) || (isLoopbackConnection(c) && c.req.header("x-forwarded-proto") === "https");
+}
+
+export function userAgentOf(c: Context): string {
+  return c.req.header("user-agent") ?? "";
 }
