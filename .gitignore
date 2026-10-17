@@ -1,0 +1,15 @@
+docs/
+.superpowers/
+.playwright-mcp/
+.remember/
+node_modules/
+dist/
+release/
+*.db
+*.db-*
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
