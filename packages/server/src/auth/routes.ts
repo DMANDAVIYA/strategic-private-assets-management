@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 import { Hono, type Context } from "hono";
 import type { Db } from "../db/index.js";
 import { users } from "../db/schema.js";
-import { clientIp } from "../http/request.js";
+import { clientIp, userAgentOf } from "../http/request.js";
 import { seedDefaults } from "../settings.js";
 import { clearSessionCookie, readSessionToken, secondsUntil, writeSessionCookie } from "./cookie.js";
 import { currentTime, type AuthDeps } from "./deps.js";
@@ -32,10 +32,6 @@ function userExists(db: Db): boolean {
   return db.orm.select({ id: users.id }).from(users).limit(1).get() !== undefined;
 }
 
-function userAgentOf(c: Context): string {
-  return c.req.header("user-agent") ?? "";
-}
-
 function createExclusiveRunner(): <T>(task: () => Promise<T>) => Promise<T> {
   let tail: Promise<unknown> = Promise.resolve();
   return (task) => {
@@ -45,12 +41,20 @@ function createExclusiveRunner(): <T>(task: () => Promise<T>) => Promise<T> {
   };
 }
 
+function cacheUnlessRejected<T>(create: () => Promise<T>): () => Promise<T> {
+  let cached: Promise<T> | undefined;
+  return () =>
+    (cached ??= create().catch((error: unknown) => {
+      cached = undefined;
+      throw error;
+    }));
+}
+
 export function authRoutes(deps: AuthDeps): Hono {
   const { db } = deps;
   const app = new Hono();
   const runLoginExclusively = createExclusiveRunner();
-  let unknownUserHash: Promise<string> | undefined;
-  const hashForUnknownUser = () => (unknownUserHash ??= hashPassword(randomBytes(32).toString("base64url")));
+  const hashForUnknownUser = cacheUnlessRejected(() => hashPassword(randomBytes(32).toString("base64url")));
 
   function createFirstUser(
     input: SetupInput,

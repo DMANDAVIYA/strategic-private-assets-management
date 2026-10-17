@@ -1,13 +1,21 @@
-import { hash as argon2Hash, verify as argon2Verify } from "@node-rs/argon2";
+import { hash as argon2Hash, parseOptions, verify as argon2Verify } from "@node-rs/argon2";
 
 export function hashPassword(pw: string): Promise<string> {
   return argon2Hash(pw);
 }
 
-export async function verifyPassword(hash: string, pw: string): Promise<boolean> {
+function isWellFormedHash(hash: string): boolean {
   try {
-    return await argon2Verify(hash, pw);
+    parseOptions(hash);
+    return true;
   } catch {
     return false;
   }
+}
+
+export async function verifyPassword(hash: string, pw: string): Promise<boolean> {
+  if (!isWellFormedHash(hash)) {
+    return false;
+  }
+  return argon2Verify(hash, pw);
 }

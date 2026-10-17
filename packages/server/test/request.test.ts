@@ -27,6 +27,10 @@ test("loopback without forwarded headers uses the socket address", async () => {
   expect(await probe({ remoteAddress: "127.0.0.1" })).toEqual({ ip: "127.0.0.1", secure: false });
 });
 
-test("an https url is secure from any address", async () => {
-  expect(await probe({ remoteAddress: "192.168.1.9", url: "https://localhost/probe" })).toEqual({ ip: "192.168.1.9", secure: true });
+test("an encrypted socket is secure from any address", async () => {
+  expect(await probe({ remoteAddress: "192.168.1.9", encrypted: true })).toEqual({ ip: "192.168.1.9", secure: true });
+});
+
+test("an absolute-form https url over a plain socket is not secure", async () => {
+  expect(await probe({ remoteAddress: "192.168.1.9", url: "https://localhost/probe" })).toEqual({ ip: "192.168.1.9", secure: false });
 });

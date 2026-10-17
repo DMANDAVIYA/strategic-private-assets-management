@@ -1,7 +1,5 @@
-import { Hono } from "hono";
-import { authRoutes } from "../src/auth/routes.js";
-import { getAccessInfo } from "../src/system/access.js";
-import { systemRoutes } from "../src/system/routes.js";
+import type { Hono } from "hono";
+import { createApp, type AppDeps } from "../src/app.js";
 import { openDb, type Db } from "../src/db/index.js";
 
 export const testUser = { email: "a@b.co", password: "correct horse battery", displayName: "Alex" };
@@ -10,14 +8,13 @@ export type RequestOptions = {
   headers?: Record<string, string>;
   cookie?: string;
   remoteAddress?: string;
+  encrypted?: boolean;
   url?: string;
 };
 
-export function makeTestApp(options: { now?: () => number; access?: typeof getAccessInfo } = {}): { app: Hono; db: Db } {
+export function makeTestApp(options: Partial<Omit<AppDeps, "db">> = {}): { app: Hono; db: Db } {
   const db = openDb(":memory:");
-  const app = new Hono();
-  app.route("/api/auth", authRoutes({ db, now: options.now }));
-  app.route("/api/system", systemRoutes({ db, now: options.now, port: 7777, access: options.access }));
+  const app = createApp({ port: 7777, ...options, db });
   return { app, db };
 }
 
@@ -34,11 +31,12 @@ export function send(app: Hono, method: string, path: string, body?: unknown, op
   if (options.cookie) {
     headers.cookie = options.cookie;
   }
-  if (body !== undefined) {
-    headers["content-type"] = "application/json";
+  if (method !== "GET") {
+    headers["content-type"] ??= "application/json";
   }
   const init: RequestInit = { method, headers, body: body === undefined ? undefined : JSON.stringify(body) };
-  const env = options.remoteAddress ? { incoming: { socket: { remoteAddress: options.remoteAddress } } } : undefined;
+  const socket = { remoteAddress: options.remoteAddress, encrypted: options.encrypted };
+  const env = options.remoteAddress || options.encrypted ? { incoming: { socket } } : undefined;
   return Promise.resolve(app.request(options.url ?? path, init, env));
 }
 
