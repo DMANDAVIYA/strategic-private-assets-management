@@ -13,3 +13,4 @@ release/
 *.key
 *.p12
 *.pfx
+e2e/test-results/
