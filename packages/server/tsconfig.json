@@ -8,5 +8,6 @@
     "rootDir": ".",
     "types": ["vitest/globals", "node"]
   },
-  "include": ["src", "test", "vitest.config.ts", "drizzle.config.ts"]
+  "include": ["src", "test", "vitest.config.ts", "drizzle.config.ts"],
+  "references": [{ "path": "../shared" }]
 }
