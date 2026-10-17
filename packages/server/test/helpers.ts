@@ -1,5 +1,7 @@
 import { Hono } from "hono";
 import { authRoutes } from "../src/auth/routes.js";
+import { getAccessInfo } from "../src/system/access.js";
+import { systemRoutes } from "../src/system/routes.js";
 import { openDb, type Db } from "../src/db/index.js";
 
 export const testUser = { email: "a@b.co", password: "correct horse battery", displayName: "Alex" };
@@ -11,10 +13,11 @@ export type RequestOptions = {
   url?: string;
 };
 
-export function makeTestApp(options: { now?: () => number } = {}): { app: Hono; db: Db } {
+export function makeTestApp(options: { now?: () => number; access?: typeof getAccessInfo } = {}): { app: Hono; db: Db } {
   const db = openDb(":memory:");
   const app = new Hono();
   app.route("/api/auth", authRoutes({ db, now: options.now }));
+  app.route("/api/system", systemRoutes({ db, now: options.now, port: 7777, access: options.access }));
   return { app, db };
 }
 
