@@ -4,7 +4,7 @@
     "composite": true,
     "noEmit": false,
     "emitDeclarationOnly": true,
-    "outDir": "dist",
+    "outDir": ".tsc",
     "rootDir": ".",
     "types": ["vitest/globals", "node"]
   },

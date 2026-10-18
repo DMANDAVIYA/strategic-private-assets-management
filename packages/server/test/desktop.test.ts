@@ -101,3 +101,28 @@ test("desktop entry carries the security headers", async () => {
   expect(res.headers.get("referrer-policy")).toBe("no-referrer");
   expect(res.headers.get("x-frame-options")).toBe("DENY");
 });
+
+test("desktop entry with a valid session cookie redirects without creating another session", async () => {
+  const { app, db } = makeTestApp({ desktopToken });
+  await setupUser(app);
+  const first = await get(app, enterPath, { remoteAddress: "127.0.0.1" });
+  const cookie = cookieFrom(first);
+  const sessionsAfterFirstEntry = countRows(db, "sessions");
+  const second = await get(app, enterPath, { remoteAddress: "127.0.0.1", cookie });
+  expect(second.status).toBe(302);
+  expect(second.headers.get("location")).toBe("/");
+  expect(second.headers.get("set-cookie")).toBeNull();
+  expect(countRows(db, "sessions")).toBe(sessionsAfterFirstEntry);
+  const me = await get(app, "/api/auth/me", { cookie });
+  expect(me.status).toBe(200);
+});
+
+test("desktop entry with a stale session cookie signs the owner in again", async () => {
+  const { app, db } = makeTestApp({ desktopToken });
+  await setupUser(app);
+  const res = await get(app, enterPath, { remoteAddress: "127.0.0.1", cookie: "fp_session=stale-token" });
+  expect(res.status).toBe(302);
+  expect(res.headers.get("location")).toBe("/");
+  expect(res.headers.get("set-cookie")).toMatch(/^fp_session=/);
+  expect(countRows(db, "sessions", "trusted = 1")).toBe(1);
+});

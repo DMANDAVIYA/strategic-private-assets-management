@@ -1,0 +1,25 @@
+{
+  "name": "@financeper/desktop",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Local-first personal finance desktop app",
+  "main": "dist/main.cjs",
+  "scripts": {
+    "dev": "node esbuild.config.mjs && electron .",
+    "build": "node esbuild.config.mjs",
+    "dist": "electron-builder --win nsis",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@node-rs/argon2": "^2.2.2",
+    "better-sqlite3": "^13.0.3"
+  },
+  "devDependencies": {
+    "@financeper/server": "*",
+    "@financeper/shared": "*",
+    "@types/node": "^26.6.5",
+    "electron": "44.9.0",
+    "electron-builder": "^26.15.3",
+    "esbuild": "^0.28.2"
+  }
+}
