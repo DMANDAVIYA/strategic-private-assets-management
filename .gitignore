@@ -14,5 +14,9 @@ release/
 *.p12
 *.pfx
 e2e/test-results/
+e2e/playwright-report/
+playwright-report/
+test-results/
+blob-report/
 .tsc/
 *.tsbuildinfo
