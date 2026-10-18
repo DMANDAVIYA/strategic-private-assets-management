@@ -27,8 +27,13 @@ function qrSrc(url: string): string {
   return `/api/system/access/qr.svg?url=${encodeURIComponent(url)}`;
 }
 
+function clipboardApi(): Clipboard | undefined {
+  return (navigator as { clipboard?: Clipboard }).clipboard;
+}
+
 function CopyButton({ value }: { value: string }) {
   const [copiedAt, setCopiedAt] = useState<number | null>(null);
+  const clipboard = clipboardApi();
 
   useEffect(() => {
     if (copiedAt === null) {
@@ -39,14 +44,19 @@ function CopyButton({ value }: { value: string }) {
   }, [copiedAt]);
 
   function copy() {
-    navigator.clipboard.writeText(value).then(
+    clipboard?.writeText(value).then(
       () => setCopiedAt(Date.now()),
       () => setCopiedAt(null),
     );
   }
 
   return (
-    <Button onClick={copy} className="min-w-[84px]">
+    <Button
+      onClick={copy}
+      className="min-w-[84px]"
+      disabled={clipboard === undefined}
+      title={clipboard === undefined ? "Copy needs a secure address" : undefined}
+    >
       {copiedAt === null ? "Copy" : "Copied"}
     </Button>
   );

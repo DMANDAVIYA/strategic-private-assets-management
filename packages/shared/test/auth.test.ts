@@ -1,9 +1,9 @@
 import { SetupInput, LoginInput } from "../src/index.js";
 
 test("setup input lowercases and trims email", () => {
-  const r = SetupInput.parse({ email: "  Dhruvil@Example.COM ", password: "correct horse battery", displayName: " Dhruvil " });
-  expect(r.email).toBe("dhruvil@example.com");
-  expect(r.displayName).toBe("Dhruvil");
+  const r = SetupInput.parse({ email: "  Owner@Example.COM ", password: "correct horse battery", displayName: " Owner " });
+  expect(r.email).toBe("owner@example.com");
+  expect(r.displayName).toBe("Owner");
 });
 
 test("setup input rejects short password", () => {

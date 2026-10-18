@@ -1,9 +1,9 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { Hono } from "hono";
-import { secondsUntil, writeSessionCookie } from "./auth/cookie.js";
+import { readSessionToken, secondsUntil, writeSessionCookie } from "./auth/cookie.js";
 import { currentTime, type AuthDeps } from "./auth/deps.js";
 import { resolveSession } from "./auth/requireAuth.js";
-import { createSession } from "./auth/sessions.js";
+import { createSession, revokeSession } from "./auth/sessions.js";
 import { users } from "./db/schema.js";
 import { clientIp, isLocalClient, userAgentOf } from "./http/request.js";
 
@@ -32,8 +32,13 @@ export function desktopRoutes(deps: DesktopDeps): Hono {
     if (owner === undefined) {
       return c.redirect("/setup");
     }
-    if (resolveSession(c, deps)?.user.id === owner.id) {
+    const existing = resolveSession(c, deps);
+    if (existing?.user.id === owner.id && existing.trusted) {
       return c.redirect("/");
+    }
+    const presentedToken = readSessionToken(c);
+    if (presentedToken !== undefined) {
+      revokeSession(db, presentedToken);
     }
     const now = currentTime(deps);
     const device = { ip: clientIp(c), userAgent: userAgentOf(c) };

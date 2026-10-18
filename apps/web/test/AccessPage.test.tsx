@@ -119,12 +119,30 @@ test("falls back to the first lan url when serve is not active", async () => {
 
 test("copy writes the preferred url to the clipboard and reads Copied", async () => {
   givenAccess(accessInfo());
-  await renderPage(AccessPage, "/settings/access");
   const user = userEvent.setup();
+  await renderPage(AccessPage, "/settings/access");
   const writeText = vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue(undefined);
   await user.click(screen.getByRole("button", { name: "Copy" }));
   expect(writeText).toHaveBeenCalledWith(FIRST_LAN_URL);
   expect(await screen.findByRole("button", { name: "Copied" })).toBeInTheDocument();
+});
+
+test("copy is disabled with a hint when the clipboard api is missing", async () => {
+  givenAccess(accessInfo());
+  const descriptor = Object.getOwnPropertyDescriptor(navigator, "clipboard");
+  Object.defineProperty(navigator, "clipboard", { value: undefined, configurable: true });
+  try {
+    await renderPage(AccessPage, "/settings/access");
+    const copy = screen.getByRole("button", { name: "Copy" });
+    expect(copy).toBeDisabled();
+    expect(copy).toHaveAttribute("title", "Copy needs a secure address");
+  } finally {
+    if (descriptor === undefined) {
+      delete (navigator as { clipboard?: Clipboard }).clipboard;
+    } else {
+      Object.defineProperty(navigator, "clipboard", descriptor);
+    }
+  }
 });
 
 test("no address shows the network message and no copy button or qr", async () => {

@@ -34,11 +34,11 @@ function stubExec(overrides: Record<string, string | Error> = {}) {
 
 const noRoute = async () => null;
 
-const ownerInterfaces = () => ({
-  wt0: [iface("100.73.225.142")],
+const virtualAdapterInterfaces = () => ({
+  wt0: [iface("100.100.100.100")],
   "Ethernet 5": [iface("192.168.56.1")],
-  "Wi-Fi": [iface("10.0.0.15")],
-  "vEthernet (WSL (Hyper-V firewall))": [iface("172.28.64.1")],
+  "Wi-Fi": [iface("10.1.2.3")],
+  "vEthernet (WSL)": [iface("172.28.64.1")],
 });
 
 test("lists lan urls without internal or link-local, 192.168 first", async () => {
@@ -47,28 +47,28 @@ test("lists lan urls without internal or link-local, 192.168 first", async () =>
 });
 
 test("ranks the default route address first and drops tunnel and virtual adapters", async () => {
-  const defaultRouteAddress = async () => "10.0.0.15";
-  const info = await getAccessInfo({ port: 7777, exec: stubExec(), interfaces: ownerInterfaces, defaultRouteAddress });
-  expect(info.lanUrls).toEqual(["http://10.0.0.15:7777", "http://192.168.56.1:7777"]);
+  const defaultRouteAddress = async () => "10.1.2.3";
+  const info = await getAccessInfo({ port: 7777, exec: stubExec(), interfaces: virtualAdapterInterfaces, defaultRouteAddress });
+  expect(info.lanUrls).toEqual(["http://10.1.2.3:7777", "http://192.168.56.1:7777"]);
 });
 
 test("keeps 192.168 first among kept addresses when the route probe finds nothing", async () => {
-  const info = await getAccessInfo({ port: 7777, exec: stubExec(), interfaces: ownerInterfaces, defaultRouteAddress: noRoute });
-  expect(info.lanUrls).toEqual(["http://192.168.56.1:7777", "http://10.0.0.15:7777"]);
+  const info = await getAccessInfo({ port: 7777, exec: stubExec(), interfaces: virtualAdapterInterfaces, defaultRouteAddress: noRoute });
+  expect(info.lanUrls).toEqual(["http://192.168.56.1:7777", "http://10.1.2.3:7777"]);
 });
 
 test("ignores a route probe address that is not a kept address", async () => {
   const defaultRouteAddress = async () => "172.28.64.1";
-  const info = await getAccessInfo({ port: 7777, exec: stubExec(), interfaces: ownerInterfaces, defaultRouteAddress });
-  expect(info.lanUrls).toEqual(["http://192.168.56.1:7777", "http://10.0.0.15:7777"]);
+  const info = await getAccessInfo({ port: 7777, exec: stubExec(), interfaces: virtualAdapterInterfaces, defaultRouteAddress });
+  expect(info.lanUrls).toEqual(["http://192.168.56.1:7777", "http://10.1.2.3:7777"]);
 });
 
 test("treats a throwing route probe as no route", async () => {
   const defaultRouteAddress = async (): Promise<string | null> => {
     throw new Error("EACCES");
   };
-  const info = await getAccessInfo({ port: 7777, exec: stubExec(), interfaces: ownerInterfaces, defaultRouteAddress });
-  expect(info.lanUrls).toEqual(["http://192.168.56.1:7777", "http://10.0.0.15:7777"]);
+  const info = await getAccessInfo({ port: 7777, exec: stubExec(), interfaces: virtualAdapterInterfaces, defaultRouteAddress });
+  expect(info.lanUrls).toEqual(["http://192.168.56.1:7777", "http://10.1.2.3:7777"]);
 });
 
 test("excludes the carrier-grade nat range only", async () => {
@@ -106,7 +106,7 @@ test("excludes virtual, tunnel and tailscale adapters by name", () => {
 });
 
 test("reports a running tailscale with active serve", async () => {
-  const info = await getAccessInfo({ port: 7777, exec: stubExec(), interfaces });
+  const info = await getAccessInfo({ port: 7777, exec: stubExec(), interfaces, defaultRouteAddress: noRoute });
   expect(info.tailscale).toEqual({
     installed: true,
     running: true,
@@ -118,13 +118,13 @@ test("reports a running tailscale with active serve", async () => {
 
 test("reports serve inactive when it proxies another port", async () => {
   const other = JSON.stringify({ Web: { "x:443": { Handlers: { "/": { Proxy: "http://127.0.0.1:9000" } } } } });
-  const info = await getAccessInfo({ port: 7777, exec: stubExec({ serve: other }), interfaces });
+  const info = await getAccessInfo({ port: 7777, exec: stubExec({ serve: other }), interfaces, defaultRouteAddress: noRoute });
   expect(info.tailscale.serveActive).toBe(false);
 });
 
 test("reports stopped tailscale without url", async () => {
   const stopped = JSON.stringify({ BackendState: "Stopped", Self: { DNSName: "hp.tail1234.ts.net." } });
-  const info = await getAccessInfo({ port: 7777, exec: stubExec({ status: stopped }), interfaces });
+  const info = await getAccessInfo({ port: 7777, exec: stubExec({ status: stopped }), interfaces, defaultRouteAddress: noRoute });
   expect(info.tailscale).toEqual({ installed: true, running: false, hostname: null, httpsUrl: null, serveActive: false });
 });
 
@@ -132,13 +132,13 @@ test("degrades when exec always fails", async () => {
   const exec = async () => {
     throw new Error("ENOENT");
   };
-  const info = await getAccessInfo({ port: 7777, exec, interfaces });
+  const info = await getAccessInfo({ port: 7777, exec, interfaces, defaultRouteAddress: noRoute });
   expect(info.tailscale).toEqual({ installed: false, running: false, hostname: null, httpsUrl: null, serveActive: false });
   expect(info.lanUrls).toHaveLength(2);
 });
 
 test("degrades when status output is not json", async () => {
-  const info = await getAccessInfo({ port: 7777, exec: stubExec({ status: "nope" }), interfaces });
+  const info = await getAccessInfo({ port: 7777, exec: stubExec({ status: "nope" }), interfaces, defaultRouteAddress: noRoute });
   expect(info.tailscale).toEqual({ installed: true, running: false, hostname: null, httpsUrl: null, serveActive: false });
 });
 
@@ -210,7 +210,7 @@ test("runs version, status and serve status in order against one binary", async 
     calls.push([file, args]);
     return { stdout: args[0] === "status" ? statusJson : args[0] === "serve" ? serveJson : "1.80.0" };
   };
-  await getAccessInfo({ port: 7777, exec, interfaces });
+  await getAccessInfo({ port: 7777, exec, interfaces, defaultRouteAddress: noRoute });
   const binary = tailscaleBinary(process.platform);
   expect(calls).toEqual([
     [binary, ["version"]],

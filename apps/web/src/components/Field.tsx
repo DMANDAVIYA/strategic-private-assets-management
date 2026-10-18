@@ -17,7 +17,7 @@ export function Field({ id, label, error, className = "", ...input }: FieldProps
         id={id}
         aria-invalid={error === undefined ? undefined : true}
         aria-describedby={error === undefined ? undefined : errorId}
-        className={`min-h-11 w-full rounded-lg border border-hairline bg-ground px-2.5 py-2 text-[0.88rem] text-text placeholder:text-faint aria-invalid:border-negative sm:min-h-0 ${className}`}
+        className={`min-h-11 w-full rounded-lg border border-hairline bg-ground px-2.5 py-2 text-base text-text placeholder:text-faint aria-invalid:border-negative sm:min-h-0 sm:text-[0.88rem] ${className}`}
         {...input}
       />
       {error === undefined ? null : (

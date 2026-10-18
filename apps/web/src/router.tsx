@@ -21,6 +21,15 @@ type RouterContext = { queryClient: QueryClient };
 type GuardTarget = "/setup" | "/login" | "/" | null;
 
 const GATEWAY_STATUSES = new Set([502, 503, 504]);
+const PENDING_AFTER_MS = 500;
+
+function ConnectingNotice() {
+  return (
+    <main className="flex min-h-screen items-center justify-center px-4">
+      <p className="text-[0.86rem] text-muted">Connecting to your PC…</p>
+    </main>
+  );
+}
 
 export function isUnreachable(error: unknown): boolean {
   return error instanceof NetworkError || (isApiError(error) && GATEWAY_STATUSES.has(error.status));
@@ -88,7 +97,15 @@ const routeTree = rootRoute.addChildren([
 ]);
 
 export function createAppRouter(queryClient: QueryClient, history?: RouterHistory) {
-  return createRouter({ routeTree, context: { queryClient }, history, defaultPreload: false });
+  return createRouter({
+    routeTree,
+    context: { queryClient },
+    history,
+    defaultPreload: false,
+    defaultPendingComponent: ConnectingNotice,
+    defaultPendingMs: PENDING_AFTER_MS,
+    defaultPendingMinMs: 0,
+  });
 }
 
 declare module "@tanstack/react-router" {

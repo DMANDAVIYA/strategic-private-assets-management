@@ -36,7 +36,7 @@ export function NavOverlay({ id, open, onClose }: NavOverlayProps) {
   return (
     <div id={id} role="dialog" aria-modal="true" aria-label="Navigation" className="fixed inset-0 z-50 flex sm:hidden">
       <div className="absolute inset-0 bg-ground/70" onClick={onClose} />
-      <div className="relative flex h-full w-[280px] max-w-[85vw] flex-col gap-0.5 border-r border-hairline bg-ground px-3 py-4 text-[0.84rem] text-muted">
+      <div className="relative flex h-full w-[280px] max-w-[85vw] flex-col gap-0.5 border-r border-hairline bg-ground pb-[calc(1rem+env(safe-area-inset-bottom))] pl-[calc(0.75rem+env(safe-area-inset-left))] pr-3 pt-[calc(1rem+env(safe-area-inset-top))] text-[0.84rem] text-muted">
         <div className="flex items-center justify-between pb-3.5 pl-2.5 pt-1">
           <span className="text-[0.95rem] font-bold text-text">financeper</span>
           <button
