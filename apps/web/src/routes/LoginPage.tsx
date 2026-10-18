@@ -73,7 +73,7 @@ export function LoginPage() {
           autoComplete="current-password"
           error={errors.password}
         />
-        <label className="flex items-center gap-2 text-[0.84rem] text-muted">
+        <label className="flex min-h-11 items-center gap-2 text-[0.84rem] text-muted sm:min-h-0">
           <input type="checkbox" name="trustDevice" className="size-4 accent-amber" />
           Trust this device for 30 days
         </label>

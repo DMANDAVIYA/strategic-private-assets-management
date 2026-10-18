@@ -22,7 +22,7 @@ function serverMessage(error: Error | null): ReactNode {
     return (
       <>
         An account already exists.{" "}
-        <Link to="/login" className="text-text underline underline-offset-2">
+        <Link to="/login" className="-my-3 inline-block py-3 text-text underline underline-offset-2 sm:my-0 sm:py-0">
           Log in instead.
         </Link>
       </>
