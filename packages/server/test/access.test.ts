@@ -1,6 +1,6 @@
 import { AccessInfoSchema, type AccessInfo } from "@financeper/shared";
 import type { NetworkInterfaceInfo } from "node:os";
-import { getAccessInfo, isServeActive, tailscaleBinary } from "../src/system/access.js";
+import { EXCLUDED_INTERFACE_NAMES, getAccessInfo, isExcludedInterfaceName, isServeActive, tailscaleBinary } from "../src/system/access.js";
 import { cookieFrom, get, makeTestApp, setupUser } from "./helpers.js";
 
 function iface(address: string, internal = false): NetworkInterfaceInfo {
@@ -32,9 +32,77 @@ function stubExec(overrides: Record<string, string | Error> = {}) {
   };
 }
 
+const noRoute = async () => null;
+
+const ownerInterfaces = () => ({
+  wt0: [iface("100.73.225.142")],
+  "Ethernet 5": [iface("192.168.56.1")],
+  "Wi-Fi": [iface("10.0.0.15")],
+  "vEthernet (WSL (Hyper-V firewall))": [iface("172.28.64.1")],
+});
+
 test("lists lan urls without internal or link-local, 192.168 first", async () => {
-  const info = await getAccessInfo({ port: 7777, exec: stubExec(), interfaces });
+  const info = await getAccessInfo({ port: 7777, exec: stubExec(), interfaces, defaultRouteAddress: noRoute });
   expect(info.lanUrls).toEqual(["http://192.168.1.20:7777", "http://10.0.0.5:7777"]);
+});
+
+test("ranks the default route address first and drops tunnel and virtual adapters", async () => {
+  const defaultRouteAddress = async () => "10.0.0.15";
+  const info = await getAccessInfo({ port: 7777, exec: stubExec(), interfaces: ownerInterfaces, defaultRouteAddress });
+  expect(info.lanUrls).toEqual(["http://10.0.0.15:7777", "http://192.168.56.1:7777"]);
+});
+
+test("keeps 192.168 first among kept addresses when the route probe finds nothing", async () => {
+  const info = await getAccessInfo({ port: 7777, exec: stubExec(), interfaces: ownerInterfaces, defaultRouteAddress: noRoute });
+  expect(info.lanUrls).toEqual(["http://192.168.56.1:7777", "http://10.0.0.15:7777"]);
+});
+
+test("ignores a route probe address that is not a kept address", async () => {
+  const defaultRouteAddress = async () => "172.28.64.1";
+  const info = await getAccessInfo({ port: 7777, exec: stubExec(), interfaces: ownerInterfaces, defaultRouteAddress });
+  expect(info.lanUrls).toEqual(["http://192.168.56.1:7777", "http://10.0.0.15:7777"]);
+});
+
+test("treats a throwing route probe as no route", async () => {
+  const defaultRouteAddress = async (): Promise<string | null> => {
+    throw new Error("EACCES");
+  };
+  const info = await getAccessInfo({ port: 7777, exec: stubExec(), interfaces: ownerInterfaces, defaultRouteAddress });
+  expect(info.lanUrls).toEqual(["http://192.168.56.1:7777", "http://10.0.0.15:7777"]);
+});
+
+test("excludes the carrier-grade nat range only", async () => {
+  const ranges = () => ({
+    A: [iface("100.63.255.254")],
+    B: [iface("100.64.0.1")],
+    C: [iface("100.127.255.254")],
+    D: [iface("100.128.0.1")],
+  });
+  const info = await getAccessInfo({ port: 7777, exec: stubExec(), interfaces: ranges, defaultRouteAddress: noRoute });
+  expect(info.lanUrls).toEqual(["http://100.63.255.254:7777", "http://100.128.0.1:7777"]);
+});
+
+test("excludes virtual, tunnel and tailscale adapters by name", () => {
+  for (const name of [
+    "vEthernet (Default Switch)",
+    "VirtualBox Host-Only Network",
+    "VMware Network Adapter VMnet8",
+    "wt0",
+    "tun0",
+    "utun3",
+    "wg0",
+    "Tailscale",
+    "Loopback Pseudo-Interface 1",
+    "Bluetooth Network Connection",
+    "ZeroTier One [abc]",
+    "Hamachi",
+  ]) {
+    expect(isExcludedInterfaceName(name)).toBe(true);
+  }
+  for (const name of ["Wi-Fi", "Ethernet", "Ethernet 5", "Network", "eth0", "wlan0"]) {
+    expect(isExcludedInterfaceName(name)).toBe(false);
+  }
+  expect(EXCLUDED_INTERFACE_NAMES).toContain("Tailscale");
 });
 
 test("reports a running tailscale with active serve", async () => {
