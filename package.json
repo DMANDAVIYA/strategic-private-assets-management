@@ -12,9 +12,12 @@
     "build": "npm run build -w apps/web && npm run build -w packages/server && npm run build -w apps/desktop",
     "dist": "npm run build && npm run dist -w apps/desktop",
     "test": "vitest run",
-    "typecheck": "tsc -b"
+    "typecheck": "tsc -b",
+    "e2e": "playwright test -c e2e/playwright.config.ts",
+    "e2e:build": "npm run build -w apps/web && npm run e2e"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "concurrently": "^10.0.6",
     "typescript": "^7.0.2",
     "vitest": "^5.0.5"
