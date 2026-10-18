@@ -2,6 +2,7 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import { Hono } from "hono";
 import { secondsUntil, writeSessionCookie } from "./auth/cookie.js";
 import { currentTime, type AuthDeps } from "./auth/deps.js";
+import { resolveSession } from "./auth/requireAuth.js";
 import { createSession } from "./auth/sessions.js";
 import { users } from "./db/schema.js";
 import { clientIp, isLocalClient, userAgentOf } from "./http/request.js";
@@ -30,6 +31,9 @@ export function desktopRoutes(deps: DesktopDeps): Hono {
     const owner = db.orm.select({ id: users.id }).from(users).limit(1).get();
     if (owner === undefined) {
       return c.redirect("/setup");
+    }
+    if (resolveSession(c, deps)?.user.id === owner.id) {
+      return c.redirect("/");
     }
     const now = currentTime(deps);
     const device = { ip: clientIp(c), userAgent: userAgentOf(c) };

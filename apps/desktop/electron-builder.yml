@@ -1,0 +1,21 @@
+appId: com.financeper.desktop
+productName: financeper
+directories:
+  output: release
+files:
+  - dist/**
+  - resources/icon.png
+extraResources:
+  - from: ../web/dist
+    to: web
+  - from: ../../packages/server/drizzle
+    to: drizzle
+npmRebuild: false
+asarUnpack:
+  - "**/*.node"
+win:
+  target: nsis
+  icon: resources/icon.png
+nsis:
+  oneClick: false
+  perMachine: false

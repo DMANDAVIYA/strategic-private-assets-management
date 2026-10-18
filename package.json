@@ -7,11 +7,22 @@
     "apps/*"
   ],
   "scripts": {
+    "dev": "concurrently -k -n web,desktop \"npm run dev -w apps/web\" \"npm run dev -w apps/desktop\"",
+    "dev:web": "concurrently -k -n server,web \"npm run dev -w packages/server\" \"npm run dev -w apps/web\"",
+    "build": "npm run build -w apps/web && npm run build -w packages/server && npm run build -w apps/desktop",
+    "dist": "npm run build && npm run dist -w apps/desktop",
     "test": "vitest run",
     "typecheck": "tsc -b"
   },
   "devDependencies": {
+    "concurrently": "^10.0.6",
     "typescript": "^7.0.2",
     "vitest": "^5.0.5"
+  },
+  "allowScripts": {
+    "better-sqlite3": false,
+    "electron": true,
+    "esbuild": true,
+    "electron-winstaller": false
   }
 }
