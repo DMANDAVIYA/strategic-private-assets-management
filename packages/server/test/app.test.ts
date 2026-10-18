@@ -9,7 +9,7 @@ const securityHeaders = {
   "referrer-policy": "no-referrer",
   "x-frame-options": "DENY",
   "content-security-policy":
-    "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self'",
+    "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self'",
 };
 
 function expectSecurityHeaders(res: Response): void {

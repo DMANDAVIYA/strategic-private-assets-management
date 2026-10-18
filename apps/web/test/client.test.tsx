@@ -1,4 +1,4 @@
-import { ApiError, NetworkError, api } from "../src/api/client";
+import { ApiError, NetworkError, REQUEST_TIMEOUT_MS, api } from "../src/api/client";
 import { jsonResponse } from "./helpers";
 
 test("get throws ApiError carrying status and body on 401", async () => {
@@ -41,4 +41,29 @@ test("post without a body sends an empty json object and resolves null on 204", 
   const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
   expect(init.body).toBe("{}");
   expect(new Headers(init.headers).get("content-type")).toBe("application/json");
+});
+
+test("get aborts after the request timeout and throws NetworkError", async () => {
+  vi.useFakeTimers();
+  try {
+    const fetchMock = vi.fn(
+      (_input: RequestInfo | URL, init?: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")));
+        }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const outcome = api.get("/api/auth/status").then(
+      () => "resolved",
+      (error: unknown) => error,
+    );
+    await vi.advanceTimersByTimeAsync(REQUEST_TIMEOUT_MS - 1);
+    const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(init.signal?.aborted).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(init.signal?.aborted).toBe(true);
+    expect(await outcome).toBeInstanceOf(NetworkError);
+  } finally {
+    vi.useRealTimers();
+  }
 });

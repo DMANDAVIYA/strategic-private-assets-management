@@ -1,4 +1,5 @@
 import { autostartAllowed, autostartMarkerPath, dbPath, isDev, migrationsDir, staticDir } from "./paths.js";
+import { setAutostart, startHidden } from "./autostart.js";
 import { startServer, type RunningServer } from "@financeper/server";
 import { randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
@@ -11,15 +12,46 @@ const SERVER_ORIGIN = `http://127.0.0.1:${PORT}`;
 const DEV_ORIGIN = "http://localhost:5173";
 const ALLOWED_ORIGINS = new Set([SERVER_ORIGIN, DEV_ORIGIN]);
 const RETRY_LOAD_MS = 500;
+const SIGNED_OUT_PATHS = new Set(["/login", "/setup"]);
 
 let mainWindow: BrowserWindow | null = null;
 let server: RunningServer | null = null;
 let tray: Tray | null = null;
+let entryUrl: string | null = null;
 let quitting = false;
+
+async function accountExists(origin: string): Promise<boolean> {
+  try {
+    const response = await fetch(`${origin}/api/auth/status`);
+    const status = (await response.json()) as { setupRequired?: boolean };
+    return status.setupRequired === false;
+  } catch {
+    return false;
+  }
+}
+
+async function reenterIfSignedOut(window: BrowserWindow, entry: string): Promise<void> {
+  let current: URL;
+  try {
+    current = new URL(window.webContents.getURL());
+  } catch {
+    return;
+  }
+  if (!SIGNED_OUT_PATHS.has(current.pathname)) {
+    return;
+  }
+  if (current.pathname === "/setup" && !(await accountExists(current.origin))) {
+    return;
+  }
+  await window.loadURL(entry);
+}
 
 function showWindow(): void {
   if (mainWindow === null) {
     return;
+  }
+  if (entryUrl !== null) {
+    void reenterIfSignedOut(mainWindow, entryUrl);
   }
   if (mainWindow.isMinimized()) {
     mainWindow.restore();
@@ -36,12 +68,13 @@ function isAllowedUrl(url: string): boolean {
   }
 }
 
-function createWindow(entryUrl: string): BrowserWindow {
+function createWindow(entry: string): BrowserWindow {
   const window = new BrowserWindow({
     width: 1280,
     height: 820,
     minWidth: 960,
     minHeight: 640,
+    show: !startHidden,
     backgroundColor: "#1B2730",
     autoHideMenuBar: true,
     title: "financeper",
@@ -54,8 +87,8 @@ function createWindow(entryUrl: string): BrowserWindow {
     }
   });
   window.webContents.on("did-fail-load", (_event, _code, _description, failedUrl, isMainFrame) => {
-    if (isMainFrame && failedUrl === entryUrl) {
-      setTimeout(() => void window.loadURL(entryUrl), RETRY_LOAD_MS);
+    if (isMainFrame && failedUrl === entry) {
+      setTimeout(() => void window.loadURL(entry), RETRY_LOAD_MS);
     }
   });
   window.on("close", (event) => {
@@ -64,7 +97,7 @@ function createWindow(entryUrl: string): BrowserWindow {
       window.hide();
     }
   });
-  void window.loadURL(entryUrl);
+  void window.loadURL(entry);
   return window;
 }
 
@@ -84,7 +117,7 @@ function registerAutostartOnce(): void {
   if (!autostartAllowed || existsSync(autostartMarkerPath)) {
     return;
   }
-  app.setLoginItemSettings({ openAtLogin: true });
+  setAutostart(true);
   mkdirSync(dirname(autostartMarkerPath), { recursive: true });
   writeFileSync(autostartMarkerPath, "");
 }
@@ -107,7 +140,8 @@ async function start(): Promise<void> {
     throw error;
   }
   const origin = isDev ? DEV_ORIGIN : SERVER_ORIGIN;
-  mainWindow = createWindow(`${origin}/desktop/enter?token=${desktopToken}`);
+  entryUrl = `${origin}/desktop/enter?token=${desktopToken}`;
+  mainWindow = createWindow(entryUrl);
   tray = createTray({ port: PORT, autostartAllowed, open: showWindow, quit });
   registerAutostartOnce();
 }

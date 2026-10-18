@@ -30,6 +30,14 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+test("shows the connecting notice while the status request is unresolved", async () => {
+  vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>(() => undefined)));
+  const router = await renderApp("/");
+  const notice = await screen.findByText("Connecting to your PC…", {}, { timeout: 3_000 });
+  expect(notice).toHaveClass("text-muted");
+  expect(router.state.location.pathname).toBe("/");
+});
+
 test("network failure redirects to /unreachable", async () => {
   vi.stubGlobal("fetch", vi.fn(async () => Promise.reject(new TypeError("Failed to fetch"))));
   const router = await renderApp("/");

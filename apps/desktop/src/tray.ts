@@ -1,6 +1,7 @@
-import { getAccessInfo } from "@financeper/server/src/system/access.js";
+import { getAccessInfo } from "@financeper/server";
 import { preferredAccessUrl } from "@financeper/shared";
 import { app, clipboard, dialog, Menu, nativeImage, Tray, type MenuItem, type MenuItemConstructorOptions, type NativeImage } from "electron";
+import { autostartEnabled, setAutostart } from "./autostart.js";
 import { buildTrayMenuTemplate, TRAY_MENU_IDS } from "./menu.js";
 import { iconPath } from "./paths.js";
 
@@ -19,17 +20,25 @@ function trayImage(): NativeImage {
   return image;
 }
 
-async function copyPhoneLink(port: number): Promise<void> {
-  const info = await getAccessInfo({ port });
-  const url = preferredAccessUrl(info);
-  clipboard.writeText(url ?? "");
-  if (url === null) {
-    await dialog.showMessageBox({ type: "info", title: "financeper", message: "No network address found." });
+async function phoneLink(port: number): Promise<string | null> {
+  try {
+    return preferredAccessUrl(await getAccessInfo({ port }));
+  } catch {
+    return null;
   }
 }
 
+async function copyPhoneLink(port: number): Promise<void> {
+  const url = await phoneLink(port);
+  if (url === null) {
+    await dialog.showMessageBox({ type: "info", title: "financeper", message: "No network address found." });
+    return;
+  }
+  clipboard.writeText(url);
+}
+
 function startAtLogin(options: TrayOptions): boolean {
-  return options.autostartAllowed && app.getLoginItemSettings().openAtLogin;
+  return options.autostartAllowed && autostartEnabled();
 }
 
 export function createTray(options: TrayOptions): Tray {
@@ -40,7 +49,7 @@ export function createTray(options: TrayOptions): Tray {
     [TRAY_MENU_IDS.copyPhoneLink]: () => void copyPhoneLink(options.port),
     [TRAY_MENU_IDS.startAtLogin]: (item) => {
       if (options.autostartAllowed) {
-        app.setLoginItemSettings({ openAtLogin: item.checked });
+        setAutostart(item.checked);
       }
       render();
     },

@@ -1,10 +1,10 @@
 import { app } from "electron";
 import { join } from "node:path";
 
-const userDataOverride = process.env.FP_USER_DATA;
-if (userDataOverride) {
-  app.setPath("userData", userDataOverride);
-}
+const APP_NAME = "financeper";
+
+app.setName(APP_NAME);
+app.setPath("userData", process.env.FP_USER_DATA || join(app.getPath("appData"), APP_NAME));
 
 export const isDev = !app.isPackaged;
 

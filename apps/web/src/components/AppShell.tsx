@@ -80,21 +80,21 @@ export function AppShell({ title, children }: AppShellProps) {
   }
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]">
       <aside className="hidden w-[188px] shrink-0 flex-col gap-0.5 border-r border-hairline px-3 py-4 text-[0.84rem] text-muted sm:flex">
         <div className="px-2.5 pb-3.5 pt-1 text-[0.95rem] font-bold text-text">financeper</div>
         <NavLinks />
         <CheckInButton />
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="border-b border-hairline text-[0.85rem] text-muted sm:flex sm:h-[52px] sm:items-center sm:gap-[18px] sm:px-[22px]">
+        <header className="border-b border-hairline pt-[env(safe-area-inset-top)] text-[0.85rem] text-muted sm:flex sm:h-[52px] sm:items-center sm:gap-[18px] sm:px-[22px]">
           <div className="flex h-[52px] items-center gap-2 pl-1 pr-4 sm:contents">
             <MenuButton ref={menuRef} expanded={navOpen} controls={overlayId} onClick={() => setNavOpen(true)} />
             <span className="text-[0.95rem] font-bold text-text sm:hidden">financeper</span>
             <span className="flex-1 sm:hidden" />
             <Button
               variant="ghost"
-              className="px-3 py-1.5 text-[0.8rem] sm:order-last"
+              className="px-3 py-1.5 sm:order-last sm:text-[0.8rem]"
               onClick={logOut}
               disabled={logout.isPending}
             >
@@ -109,7 +109,7 @@ export function AppShell({ title, children }: AppShellProps) {
             <span className="text-text">{status?.user?.displayName}</span>
           </div>
         </header>
-        <main className="flex-1 px-4 pb-4 pt-4 sm:px-[22px] sm:pb-[22px] sm:pt-[18px]">{children}</main>
+        <main className="flex-1 px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-4 sm:px-[22px] sm:pb-[calc(22px+env(safe-area-inset-bottom))] sm:pt-[18px]">{children}</main>
       </div>
       <NavOverlay id={overlayId} open={navOpen} onClose={closeNav} />
     </div>

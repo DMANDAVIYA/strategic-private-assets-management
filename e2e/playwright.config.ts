@@ -45,7 +45,7 @@ export default defineConfig({
   testMatch: /.*\.spec\.ts/,
   fullyParallel: false,
   workers: 1,
-  retries: isCi ? 1 : 0,
+  retries: 0,
   outputDir: join(import.meta.dirname, "test-results"),
   globalTeardown: join(import.meta.dirname, "globalTeardown.ts"),
   reporter: [["list"], ["html", { open: "never", outputFolder: join(import.meta.dirname, "playwright-report") }]],

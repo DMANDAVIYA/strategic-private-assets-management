@@ -126,3 +126,17 @@ test("desktop entry with a stale session cookie signs the owner in again", async
   expect(res.headers.get("set-cookie")).toMatch(/^fp_session=/);
   expect(countRows(db, "sessions", "trusted = 1")).toBe(1);
 });
+
+test("desktop entry replaces an untrusted session with a trusted one", async () => {
+  const { app, db } = makeTestApp({ desktopToken });
+  const setupCookie = await setupUser(app);
+  expect(countRows(db, "sessions", "trusted = 0")).toBe(1);
+  const res = await get(app, enterPath, { remoteAddress: "127.0.0.1", cookie: setupCookie });
+  expect(res.status).toBe(302);
+  expect(res.headers.get("location")).toBe("/");
+  expect(res.headers.get("set-cookie")).toContain("Max-Age=2592000");
+  expect(countRows(db, "sessions", "trusted = 1")).toBe(1);
+  expect(countRows(db, "sessions", "trusted = 0")).toBe(0);
+  expect((await get(app, "/api/auth/me", { cookie: setupCookie })).status).toBe(401);
+  expect((await get(app, "/api/auth/me", { cookie: cookieFrom(res) })).status).toBe(200);
+});

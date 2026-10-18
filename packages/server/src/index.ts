@@ -6,6 +6,7 @@ import { createApp } from "./app.js";
 import { openDb } from "./db/index.js";
 
 export { createApp, type AppDeps } from "./app.js";
+export { getAccessInfo } from "./system/access.js";
 
 export type StartServerOptions = { dbPath: string; host: string; port: number; staticDir?: string; desktopToken?: string };
 

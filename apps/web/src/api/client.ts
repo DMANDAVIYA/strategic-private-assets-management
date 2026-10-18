@@ -1,3 +1,5 @@
+export const REQUEST_TIMEOUT_MS = 8_000;
+
 export class ApiError extends Error {
   readonly status: number;
   readonly body: unknown;
@@ -34,18 +36,23 @@ async function parseBody(response: Response): Promise<unknown> {
 }
 
 async function request<T>(method: "GET" | "POST", path: string, body?: unknown): Promise<T> {
-  const init: RequestInit = { method, credentials: "include" };
+  const controller = new AbortController();
+  const init: RequestInit = { method, credentials: "include", signal: controller.signal };
   if (method !== "GET") {
     init.headers = { "Content-Type": "application/json" };
     init.body = JSON.stringify(body ?? {});
   }
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   let response: Response;
+  let data: unknown;
   try {
     response = await fetch(path, init);
+    data = await parseBody(response);
   } catch {
     throw new NetworkError();
+  } finally {
+    clearTimeout(timer);
   }
-  const data = await parseBody(response);
   if (!response.ok) {
     throw new ApiError(response.status, data);
   }
