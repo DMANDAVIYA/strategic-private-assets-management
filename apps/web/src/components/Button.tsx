@@ -13,7 +13,7 @@ export function Button({ variant = "primary", className = "", type = "button", .
   return (
     <button
       type={type}
-      className={`inline-flex items-center justify-center rounded-[9px] px-3.5 py-2 text-[0.84rem] leading-none disabled:cursor-not-allowed ${VARIANTS[variant]} ${className}`}
+      className={`inline-flex min-h-11 items-center justify-center rounded-[9px] px-3.5 py-2 text-[0.84rem] leading-none disabled:cursor-not-allowed sm:min-h-0 ${VARIANTS[variant]} ${className}`}
       {...rest}
     />
   );

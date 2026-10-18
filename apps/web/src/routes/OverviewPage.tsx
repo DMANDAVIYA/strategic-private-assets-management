@@ -11,7 +11,7 @@ export function OverviewPage() {
         </p>
         <Link
           to="/settings/access"
-          className="mt-3 inline-block text-[0.84rem] text-text underline underline-offset-2"
+          className="mt-3 inline-flex min-h-11 items-center text-[0.84rem] text-text underline underline-offset-2 sm:min-h-0"
         >
           Open Access settings
         </Link>

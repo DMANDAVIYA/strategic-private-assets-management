@@ -1,49 +1,10 @@
-import { Link, useNavigate } from "@tanstack/react-router";
-import type { ReactNode } from "react";
+import { useNavigate } from "@tanstack/react-router";
+import { useId, useRef, useState, type ReactNode, type Ref } from "react";
 import { useAuthStatus, useLogout } from "../api/auth";
 import { formatHeaderDate } from "../lib/format";
 import { Button } from "./Button";
-
-type NavItem = { label: string; to?: "/" | "/settings/access" };
-
-const NAV_ITEMS: ReadonlyArray<NavItem> = [
-  { label: "Overview", to: "/" },
-  { label: "Check-in" },
-  { label: "Ledger" },
-  { label: "Accounts" },
-  { label: "Loans" },
-  { label: "Holdings" },
-  { label: "Budgets" },
-  { label: "Recurring" },
-  { label: "Reports" },
-  { label: "Settings", to: "/settings/access" },
-];
-
-const NAV_ITEM_CLASS = "rounded-lg px-2.5 py-[7px]";
-
-function NavLinks() {
-  return (
-    <nav aria-label="Main" className="flex flex-col gap-0.5">
-      {NAV_ITEMS.map((item) =>
-        item.to === undefined ? (
-          <span key={item.label} aria-disabled="true" className={`${NAV_ITEM_CLASS} text-faint`}>
-            {item.label}
-          </span>
-        ) : (
-          <Link
-            key={item.label}
-            to={item.to}
-            activeOptions={{ exact: item.to === "/" }}
-            className={`${NAV_ITEM_CLASS} hover:text-text`}
-            activeProps={{ className: "bg-panel font-semibold text-text" }}
-          >
-            {item.label}
-          </Link>
-        ),
-      )}
-    </nav>
-  );
-}
+import { CheckInButton, NavLinks } from "./NavLinks";
+import { NavOverlay } from "./NavOverlay";
 
 function CurrencyToggle() {
   return (
@@ -51,7 +12,7 @@ function CurrencyToggle() {
       inert
       role="group"
       aria-label="Display currency"
-      className="flex overflow-hidden rounded-lg border border-hairline text-[0.75rem]"
+      className="ml-auto flex overflow-hidden rounded-lg border border-hairline text-[0.75rem] sm:ml-0"
     >
       <button type="button" aria-pressed="true" className="bg-hairline px-2.5 py-1 text-text">
         USD
@@ -60,6 +21,39 @@ function CurrencyToggle() {
         INR
       </button>
     </div>
+  );
+}
+
+type MenuButtonProps = {
+  ref: Ref<HTMLButtonElement>;
+  expanded: boolean;
+  controls: string;
+  onClick: () => void;
+};
+
+function MenuButton({ ref, expanded, controls, onClick }: MenuButtonProps) {
+  return (
+    <button
+      ref={ref}
+      type="button"
+      aria-label="Open navigation"
+      aria-expanded={expanded}
+      aria-controls={controls}
+      onClick={onClick}
+      className="flex size-11 items-center justify-center rounded-lg text-text hover:bg-panel sm:hidden"
+    >
+      <svg
+        aria-hidden="true"
+        viewBox="0 0 20 20"
+        className="size-5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      >
+        <path d="M3 5.5h14M3 10h14M3 14.5h14" />
+      </svg>
+    </button>
   );
 }
 
@@ -72,33 +66,52 @@ export function AppShell({ title, children }: AppShellProps) {
   const { data: status } = useAuthStatus();
   const logout = useLogout();
   const navigate = useNavigate();
+  const [navOpen, setNavOpen] = useState(false);
+  const menuRef = useRef<HTMLButtonElement>(null);
+  const overlayId = useId();
 
   function logOut() {
     logout.mutate(undefined, { onSuccess: () => void navigate({ to: "/login" }) });
   }
 
+  function closeNav() {
+    setNavOpen(false);
+    menuRef.current?.focus();
+  }
+
   return (
     <div className="flex min-h-screen">
-      <aside className="flex w-[188px] shrink-0 flex-col gap-0.5 border-r border-hairline px-3 py-4 text-[0.84rem] text-muted">
+      <aside className="hidden w-[188px] shrink-0 flex-col gap-0.5 border-r border-hairline px-3 py-4 text-[0.84rem] text-muted sm:flex">
         <div className="px-2.5 pb-3.5 pt-1 text-[0.95rem] font-bold text-text">financeper</div>
         <NavLinks />
-        <Button className="mt-auto w-full py-[9px] text-[0.82rem]" disabled title="Coming in a later phase">
-          Tonight's check-in
-        </Button>
+        <CheckInButton />
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-[52px] items-center gap-[18px] border-b border-hairline px-[22px] text-[0.85rem] text-muted">
-          <h1 className="text-[0.95rem] font-semibold text-text">{title}</h1>
-          <span className="text-faint">{formatHeaderDate()}</span>
-          <span className="flex-1" />
-          <CurrencyToggle />
-          <span className="text-text">{status?.user?.displayName}</span>
-          <Button variant="ghost" className="px-3 py-1.5 text-[0.8rem]" onClick={logOut} disabled={logout.isPending}>
-            Log out
-          </Button>
+        <header className="border-b border-hairline text-[0.85rem] text-muted sm:flex sm:h-[52px] sm:items-center sm:gap-[18px] sm:px-[22px]">
+          <div className="flex h-[52px] items-center gap-2 pl-1 pr-4 sm:contents">
+            <MenuButton ref={menuRef} expanded={navOpen} controls={overlayId} onClick={() => setNavOpen(true)} />
+            <span className="text-[0.95rem] font-bold text-text sm:hidden">financeper</span>
+            <span className="flex-1 sm:hidden" />
+            <Button
+              variant="ghost"
+              className="px-3 py-1.5 text-[0.8rem] sm:order-last"
+              onClick={logOut}
+              disabled={logout.isPending}
+            >
+              Log out
+            </Button>
+          </div>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-4 pb-3 sm:contents">
+            <h1 className="text-[0.95rem] font-semibold text-text">{title}</h1>
+            <span className="text-faint">{formatHeaderDate()}</span>
+            <span className="hidden flex-1 sm:block" />
+            <CurrencyToggle />
+            <span className="text-text">{status?.user?.displayName}</span>
+          </div>
         </header>
-        <main className="flex-1 px-[22px] pb-[22px] pt-[18px]">{children}</main>
+        <main className="flex-1 px-4 pb-4 pt-4 sm:px-[22px] sm:pb-[22px] sm:pt-[18px]">{children}</main>
       </div>
+      <NavOverlay id={overlayId} open={navOpen} onClose={closeNav} />
     </div>
   );
 }

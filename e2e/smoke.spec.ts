@@ -19,8 +19,13 @@ async function submitLogin(page: Page, password: string, trustDevice: boolean): 
 }
 
 async function logOut(page: Page): Promise<void> {
-  await page.getByRole("button", { name: "Log out" }).press("Enter");
+  await page.getByRole("button", { name: "Log out" }).click();
   await expect(page).toHaveURL(/\/login$/);
+}
+
+async function expectNoHorizontalScroll(page: Page): Promise<void> {
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  expect(overflow, `page is ${overflow}px wider than the viewport`).toBeLessThanOrEqual(0);
 }
 
 function loginAlert(page: Page): Locator {
@@ -80,6 +85,16 @@ test.describe("smoke flow", () => {
     const qr = phonePanel.getByRole("img", { name: /^QR code for / });
     await expect(qr).toBeVisible();
     await expect.poll(() => qr.evaluate((element) => (element as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+  });
+
+  test("narrow widths show the overview and access pages without horizontal scroll", async () => {
+    test.skip(test.info().project.name !== "iphone", "only the phone viewport is narrow");
+    await page.goto("/");
+    await expect(page.getByText(ACCOUNT.displayName, { exact: true })).toBeVisible();
+    await expectNoHorizontalScroll(page);
+    await page.goto("/settings/access");
+    await expect(page.getByRole("heading", { name: "Open on your phone" })).toBeVisible();
+    await expectNoHorizontalScroll(page);
   });
 
   test("logging out returns to the login page", async () => {
