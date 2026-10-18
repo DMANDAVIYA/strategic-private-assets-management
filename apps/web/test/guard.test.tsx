@@ -81,6 +81,25 @@ test("authenticated on /login goes to the overview inside the shell", async () =
   expect(screen.getByText("INR")).toHaveAttribute("aria-pressed", "false");
 });
 
+test("/settings redirects to the access page", async () => {
+  const access = {
+    port: 7777,
+    lanUrls: ["http://192.168.1.20:7777"],
+    tailscale: { installed: false, running: false, hostname: null, httpsUrl: null, serveActive: false },
+  };
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL) =>
+      jsonResponse(200, String(input) === "/api/system/access" ? access : loggedIn),
+    ),
+  );
+  const router = await renderApp("/settings");
+  expect(await screen.findByRole("heading", { level: 1, name: "Settings" })).toBeInTheDocument();
+  expect(router.state.location.pathname).toBe("/settings/access");
+  expect(await screen.findByRole("img", { name: "QR code for http://192.168.1.20:7777" })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Settings" })).toHaveAttribute("aria-current", "page");
+});
+
 test("try again on /unreachable navigates home once the PC answers", async () => {
   const fetchMock = vi.fn<() => Promise<Response>>(async () => Promise.reject(new TypeError("Failed to fetch")));
   vi.stubGlobal("fetch", fetchMock);

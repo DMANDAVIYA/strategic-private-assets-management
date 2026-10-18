@@ -38,3 +38,14 @@ export async function renderPage(Page: () => ReactElement, path = "/") {
   await screen.findByRole("heading", { level: 1 });
   return router;
 }
+
+export function queryStub<R>(overrides: Record<string, unknown> = {}): R {
+  return {
+    data: undefined,
+    isPending: false,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
+    ...overrides,
+  } as unknown as R;
+}

@@ -62,6 +62,13 @@ const rootRoute = createRootRouteWithContext<RouterContext>()({
 });
 
 const overviewRoute = createRoute({ getParentRoute: () => rootRoute, path: "/", component: OverviewPage });
+const settingsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/settings",
+  beforeLoad: () => {
+    throw redirect({ to: "/settings/access", replace: true });
+  },
+});
 const accessRoute = createRoute({ getParentRoute: () => rootRoute, path: "/settings/access", component: AccessPage });
 const setupRoute = createRoute({ getParentRoute: () => rootRoute, path: "/setup", component: SetupPage });
 const loginRoute = createRoute({ getParentRoute: () => rootRoute, path: "/login", component: LoginPage });
@@ -71,7 +78,14 @@ const unreachableRoute = createRoute({
   component: UnreachablePage,
 });
 
-const routeTree = rootRoute.addChildren([overviewRoute, accessRoute, setupRoute, loginRoute, unreachableRoute]);
+const routeTree = rootRoute.addChildren([
+  overviewRoute,
+  settingsRoute,
+  accessRoute,
+  setupRoute,
+  loginRoute,
+  unreachableRoute,
+]);
 
 export function createAppRouter(queryClient: QueryClient, history?: RouterHistory) {
   return createRouter({ routeTree, context: { queryClient }, history, defaultPreload: false });
