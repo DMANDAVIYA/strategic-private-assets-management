@@ -1,4 +1,4 @@
 {
   "files": [],
-  "references": [{ "path": "packages/shared" }, { "path": "packages/server" }, { "path": "apps/web" }, { "path": "apps/desktop" }, { "path": "e2e" }]
+  "references": [{ "path": "packages/shared" }, { "path": "packages/core" }, { "path": "packages/server" }, { "path": "apps/web" }, { "path": "apps/desktop" }, { "path": "e2e" }]
 }
